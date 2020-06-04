@@ -1,0 +1,11 @@
+SOONEST:
+    TLS
+    ESP32
+SOON:
+    dox
+    auto MTU size / max payload size
+    String and string overloads
+MEDIUM:
+
+DREMLAND:
+    LittleFS full QoS2 recovery

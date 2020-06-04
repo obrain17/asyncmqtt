@@ -1,0 +1,16 @@
+"filename", "language", "Properties", "JSON with Comments", "Markdown", "C++", "comment", "blank", "total"
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\aworkingversion.code-workspace", "JSON with Comments", 0, 8, 0, 0, 0, 0, 8
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\docs\1.-Getting-started.md", "Markdown", 0, 0, 15, 0, 0, 12, 27
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\docs\2.-API-reference.md", "Markdown", 0, 0, 88, 0, 0, 73, 161
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\docs\3.-Memory-management.md", "Markdown", 0, 0, 4, 0, 0, 4, 8
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\docs\4.-Limitations-and-known-issues.md", "Markdown", 0, 0, 13, 0, 0, 7, 20
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\docs\5.-Troubleshooting.md", "Markdown", 0, 0, 2, 0, 0, 2, 4
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\docs\README.md", "Markdown", 0, 0, 3, 0, 0, 2, 5
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\docs\index.md", "Markdown", 0, 0, 8, 0, 0, 4, 12
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\library.properties", "Properties", 9, 0, 0, 0, 0, 1, 10
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\src\AsyncMQTT.cpp", "C++", 0, 0, 0, 218, 2, 22, 242
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\src\AsyncMQTT.h", "C++", 0, 0, 0, 124, 3, 19, 146
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\src\Packet.cpp", "C++", 0, 0, 0, 184, 8, 16, 208
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\src\Packet.h", "C++", 0, 0, 0, 133, 0, 11, 144
+"c:\Users\phil\Documents\Arduino\libraries\AsyncMQTT\src\config.h", "C++", 0, 0, 0, 3, 2, 3, 8
+"Total", "-", 9, 8, 133, 662, 15, 176, 1003
