@@ -16,16 +16,16 @@ enum ASYNC_MQTT_CNX_FLAG : uint8_t {
 
 extern AsyncClient*     _caller;
 
-using ASYNC_MQTT_BLOCK    = pair<size_t,uint8_t*>;
-using ASMQ_FN_VOID        = function<void(void)>;
-using ASMQ_FN_U8PTR       = function<void(uint8_t*)>;
-using ASMQ_FN_U8PTRU8     = function<uint8_t*(uint8_t*)>;
+using ASYNC_MQTT_BLOCK    = std::pair<size_t,uint8_t*>;
+using ASMQ_FN_VOID        = std::function<void(void)>;
+using ASMQ_FN_U8PTR       = std::function<void(uint8_t*)>;
+using ASMQ_FN_U8PTRU8     = std::function<uint8_t*(uint8_t*)>;
 using ASMQ_PACKET_MAP     = std::map<uint8_t,Packet*>;
-using ASMQ_BLOCK_Q        = queue<ASYNC_MQTT_BLOCK>;
+using ASMQ_BLOCK_Q        = std::queue<ASYNC_MQTT_BLOCK>;
 
 class Packet {
     friend class AsyncMQTT;
-        static  vector<Packet*>  _garbage;
+        static  std::vector<Packet*>  _garbage;
         static  uint16_t         _nextId;
     protected:
                 uint16_t         _id=0; 
@@ -43,24 +43,23 @@ class Packet {
         static  void             _ACK(ASMQ_PACKET_MAP* m,uint16_t id);
                 uint8_t*         _block(size_t size);
                 void	         _build(bool hold=false);
-        static  void             _clearMap(ASMQ_PACKET_MAP* m,function<bool(PublishPacket*)> pred);
-        static  void             _clearPacketMap(function<bool(PublishPacket* p)> pred);
-        static  pair<uint32_t,uint8_t> _getrl(uint8_t* p);
+        static  void             _clearMap(ASMQ_PACKET_MAP* m,std::function<bool(PublishPacket*)> pred);
+        static  void             _clearPacketMap(std::function<bool(PublishPacket* p)> pred);
+        static  std::pair<uint32_t,uint8_t> _getrl(uint8_t* p);
                 void             _idGarbage(uint16_t id);
                 void             _initGC(){ _garbage.push_back(this); }
                 void             _initId();
                 uint8_t*         _mem(const void* v,size_t size);
                 uint8_t*         _poke16(uint8_t* p,uint16_t u);
-                vector<uint8_t>  _rl(uint32_t X);
+                void             _release(uint8_t* base,size_t len);
+                std::vector<uint8_t>  _rl(uint32_t X);
                 void             _shortGarbage();
-                uint8_t*         _stringblock(const string& s){ return _mem(s.data(),s.size()); }
-
-                void        _release(uint8_t* base,size_t len);
+                uint8_t*         _stringblock(const std::string& s){ return _mem(s.data(),s.size()); }
             
                 #ifdef ASYNC_MQTT_DEBUG
                 void        _dump(){
                     ASMQ_PRINT("\ndump Packet %02x id=%d\n",_controlcode,_id);
-                    queue<ASYNC_MQTT_BLOCK> cq=_blox;
+                    std::queue<ASYNC_MQTT_BLOCK> cq=_blox;
                     while(!cq.empty()){
                         ASMQ_PRINT("blok %08x %d\n",(void*) cq.front().second,cq.front().first);
                         AsyncMQTT::dumphex(cq.front().second,cq.front().first);
@@ -107,10 +106,10 @@ class PubcompPacket: public Packet {
         PubcompPacket(uint16_t id): Packet(PUBCOMP) { _idGarbage(id); }  
 };
 class SubscribePacket: public Packet {
-        string          _topic;
+        std::string          _topic;
     public:
         uint8_t         _qos;
-        SubscribePacket(const string& topic,uint8_t qos): _topic(topic),_qos(qos),Packet(SUBSCRIBE,1,true) {
+        SubscribePacket(const std::string& topic,uint8_t qos): _topic(topic),_qos(qos),Packet(SUBSCRIBE,1,true) {
             _initId();
             _begin=[this]{ _stringblock(CSTR(_topic)); };
             _end=[this](uint8_t* p){ *p=_qos; };
@@ -118,9 +117,9 @@ class SubscribePacket: public Packet {
         }
 };
 class UnsubscribePacket: public Packet {
-        string          _topic;
+        std::string          _topic;
     public:
-        UnsubscribePacket(const string& topic): _topic(topic),Packet(UNSUBSCRIBE,1,false) {
+        UnsubscribePacket(const std::string& topic): _topic(topic),Packet(UNSUBSCRIBE,1,false) {
             _initId();
             _begin=[this]{ _stringblock(CSTR(_topic)); };
             _build();
@@ -128,7 +127,7 @@ class UnsubscribePacket: public Packet {
 };
 
 class PublishPacket: public Packet {
-        string          _topic;
+        std::string          _topic;
         uint8_t         _qos;
         bool            _retain;
         size_t          _length;

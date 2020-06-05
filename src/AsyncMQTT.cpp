@@ -3,15 +3,15 @@
 
 AsyncClient*             _caller;
 
-string          AsyncMQTT::_username;
-string          AsyncMQTT::_password;
-string          AsyncMQTT::_willTopic;
-string          AsyncMQTT::_willPayload;
+std::string          AsyncMQTT::_username;
+std::string          AsyncMQTT::_password;
+std::string          AsyncMQTT::_willTopic;
+std::string          AsyncMQTT::_willPayload;
 uint8_t         AsyncMQTT::_willQos;
 bool            AsyncMQTT::_willRetain;
 uint16_t        AsyncMQTT::_keepalive=15 * ASMQ_POLL_RATE; // 10 seconds
 bool            AsyncMQTT::_cleanSession;
-string          AsyncMQTT::_clientId;
+std::string          AsyncMQTT::_clientId;
 uint16_t        AsyncMQTT::_maxRetries=ASMQ_MAX_RETRIES; 
 
 AsyncMQTT::AsyncMQTT() {
@@ -116,9 +116,7 @@ uint8_t* AsyncMQTT::_incomingPacket(uint8_t type,struct ASMQ_PROPS props,uint8_t
             char c_topic[tlen+1];
             memcpy(&c_topic[0],p,tlen);c_topic[tlen]='\0';
             p+=tlen;
-            if(props.qos) {
-                id=_peek16(p);p+=2;
-            }
+            if(props.qos) id=_peek16(p);p+=2;
             uint16_t plen=&data[0]+len-p;
 
             if(synthetic){ // <-- from pubcomp
@@ -153,7 +151,7 @@ void AsyncMQTT::_onData(uint8_t* data, size_t len,bool synthetic) {
         uint8_t             type=p[0];
         uint8_t             bits=type & 0x0f;
         struct ASMQ_PROPS   props={ (bits & 0x6) >> 1, (bits & 0x8) >> 3, bits & 0x1};
-        pair<uint32_t,uint8_t>grl=Packet::_getrl(&p[1]); // tidy into this
+        std::pair<uint32_t,uint8_t>grl=Packet::_getrl(&p[1]); // tidy into this
         p=_incomingPacket(type,props,&p[1]+grl.second,grl.first,synthetic);
     } while (&data[0] + len - p);
 }
@@ -161,11 +159,14 @@ void AsyncMQTT::_onData(uint8_t* data, size_t len,bool synthetic) {
 void AsyncMQTT::_onPoll(AsyncClient* client) {
     if(_connected){
         ++_nPollTicks;
+        for(auto const& g:Packet::_garbage) delete g;
+        Packet::_garbage.clear();
+        Packet::_garbage.shrink_to_fit();
+//
         ++_nSrvTicks;
         if(_nSrvTicks > ((_keepalive * 5) / 4)) _onDisconnect(MQTT_SERVER_UNAVAILABLE);
         else {
             if(_nPollTicks > _keepalive){
-                _clearGarbage();
                 Packet::_clearPacketMap([](PublishPacket* pub){ return pub->resend(); });
                 new PingPacket(); // self-destructs
                 _nPollTicks=0;
@@ -176,7 +177,6 @@ void AsyncMQTT::_onPoll(AsyncClient* client) {
 
 void AsyncMQTT::connect() {
     if (_connected) return;
-    _clearGarbage();
     if (_useIp) AsyncClient::connect(_ip, _port);
     else AsyncClient::connect(CSTR(_host), _port);
 }
@@ -205,12 +205,6 @@ uint16_t AsyncMQTT::publish(const char* topic, uint8_t qos, bool retain, uint8_t
     return p->packetId();
 }
 
-void AsyncMQTT::_clearGarbage(){
-    for(auto const& g:Packet::_garbage) delete g;
-    Packet::_garbage.clear();
-    Packet::_garbage.shrink_to_fit();
-}
-
 void AsyncMQTT::_cleanStart(){
     Packet::_clearPacketMap([](PublishPacket*){ return true; }); // unconditional
     Packet::_nextId=0;
@@ -220,9 +214,7 @@ void AsyncMQTT::dumphex(const void *mem, uint32_t len, uint8_t cols) {
     const uint8_t* src = (const uint8_t*) mem;
     ASMQ_PRINT("Address: 0x%08X len: 0x%X (%d)", (ptrdiff_t)src, len, len);
     for(uint32_t i = 0; i < len; i++) {
-        if(i % cols == 0) {
-            ASMQ_PRINT("\n[0x%08X] 0x%08X: ", (ptrdiff_t)src, i);
-        }
+        if(i % cols == 0) ASMQ_PRINT("\n[0x%08X] 0x%08X: ", (ptrdiff_t)src, i);
         ASMQ_PRINT("%02X ", *src);
         src++;
     }

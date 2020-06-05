@@ -4,8 +4,8 @@ SOONEST:
 SOON:
     dox
     auto MTU size / max payload size
-    String and string overloads
+    std::string and std::string overloads
 MEDIUM:
 
-DREMLAND:
+DREAMLAND:
     LittleFS full QoS2 recovery

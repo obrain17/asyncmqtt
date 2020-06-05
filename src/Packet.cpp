@@ -3,7 +3,7 @@
 uint16_t                            Packet::_nextId=0;
 ASMQ_PACKET_MAP                     Packet::_inbound;
 ASMQ_PACKET_MAP                     Packet::_outbound;
-vector<Packet*>                     Packet::_garbage;
+std::vector<Packet*>                     Packet::_garbage;
 //
 Packet::~Packet(){
     ASMQ_BLOCK_Q cq=_blox;
@@ -23,7 +23,7 @@ void Packet::_ACK(ASMQ_PACKET_MAP* m,uint16_t id){
 
 uint8_t* Packet::_block(size_t size){
     _bs+=size+2;
-    _blox.push(make_pair(size,static_cast<uint8_t*>(malloc(size))));
+    _blox.push(std::make_pair(size,static_cast<uint8_t*>(malloc(size))));
     return _blox.back().second;
 }
 
@@ -31,7 +31,7 @@ void Packet::_build(bool hold){
     _begin();
     uint32_t sx=_bs+_hdrAdjust;
     if(_hasId) sx+=2;
-    vector<uint8_t> rl=_rl(sx);
+    std::vector<uint8_t> rl=_rl(sx);
     sx+=1+rl.size();
     uint8_t* base=(uint8_t*) malloc(sx);
     uint8_t* snd_buf=base;
@@ -49,12 +49,12 @@ void Packet::_build(bool hold){
         _blox.pop();
     }
     _end(snd_buf);
-    _blox.push(make_pair(sx,base));
+    _blox.push(std::make_pair(sx,base));
     if(!hold) _release(base,sx);
 }
 
-void Packet::_clearMap(ASMQ_PACKET_MAP* m,function<bool(PublishPacket*)> pred){
-    vector<uint16_t> morituri;
+void Packet::_clearMap(ASMQ_PACKET_MAP* m,std::function<bool(PublishPacket*)> pred){
+    std::vector<uint16_t> morituri;
     for(auto const& p:*m){
         PublishPacket*  pub=reinterpret_cast<PublishPacket*>(p.second);
         if(pred(pub)) morituri.push_back(pub->_id);
@@ -62,12 +62,12 @@ void Packet::_clearMap(ASMQ_PACKET_MAP* m,function<bool(PublishPacket*)> pred){
     for(auto const& i:morituri) _ACK(m,i);
 }
 
-void Packet::_clearPacketMap(function<bool(PublishPacket*)> pred){
+void Packet::_clearPacketMap(std::function<bool(PublishPacket*)> pred){
     _clearMap(&_outbound,pred);
     _clearMap(&_inbound,pred);
 }
 
-pair<uint32_t,uint8_t> Packet::_getrl(uint8_t* p){
+std::pair<uint32_t,uint8_t> Packet::_getrl(uint8_t* p){
     uint32_t multiplier = 1;
     uint32_t value = 0;
     uint8_t encodedByte,len=0;
@@ -78,7 +78,7 @@ pair<uint32_t,uint8_t> Packet::_getrl(uint8_t* p){
         multiplier *= 128;
 //                        if (multiplier > 128*128*128) ASMQ_PRINT("throw Error(Malformed Remaining Length)\n");
     } while ((encodedByte & 128) != 0);
-    return make_pair(value,len);
+    return std::make_pair(value,len);
 }
 
 void Packet::_idGarbage(uint16_t id){
@@ -98,7 +98,7 @@ uint8_t* Packet::_mem(const void* v,size_t size){
     if(size){
         _bs+=size+2;
         uint8_t* p=static_cast<uint8_t*>(malloc(size));
-        _blox.push(make_pair(size,p));
+        _blox.push(std::make_pair(size,p));
         memcpy(p,v,size);
         return p;
     }
@@ -118,8 +118,8 @@ void Packet::_release(uint8_t* base,size_t len){
     _caller->send();
 }
 
-vector<uint8_t> Packet::_rl(uint32_t X){
-    vector<uint8_t> rl;
+std::vector<uint8_t> Packet::_rl(uint32_t X){
+    std::vector<uint8_t> rl;
     uint8_t encodedByte;
     do{
         encodedByte = X % 128;
@@ -183,10 +183,6 @@ PublishPacket::PublishPacket(const char* topic, uint8_t qos, bool retain, uint8_
             _controlcode|=flags;
         };
         _end=[this,payload](uint8_t* p){
-            /*
-            3.3.2.2 Packet Identifier
-            The Packet Identifier field is only present in PUBLISH Packets where the QoS level is 1 or 2. Section 2.3.1 provides more information about Packet Identifiers.
-            */
             uint8_t* p2=_qos ? _poke16(p,_id):p;
             memcpy(p2,payload,_length);
         };

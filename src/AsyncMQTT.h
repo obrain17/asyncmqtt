@@ -6,7 +6,9 @@
 #include<string>
 #include<map>
 
-using namespace::std;
+//using namespace::std::std::string;
+//using namespace::std::queue;
+//using namespace::std::map;
 
 #ifdef ARDUINO_ARCH_ESP32
 #include <AsyncTCP.h>
@@ -61,12 +63,12 @@ struct ASMQ_PROPS {
 
 using ASMQ_PROPS_t              = struct ASMQ_PROPS;
 
-using AsyncMQTT_cbConnect       = function<void(bool)>;
-using AsyncMQTT_cbDisconnect    = function<void(uint8_t)>;
-using AsyncMQTT_cbSubscribe     = function<void(uint16_t, uint8_t)>;
-using AsyncMQTT_cbUnsubscribe   = function<void(uint16_t)>;
-using AsyncMQTT_cbMessage       = function<void(const char*, uint8_t*, ASMQ_PROPS_t , size_t, size_t, size_t)>;
-using AsyncMQTT_cbPublish       = function<void(uint16_t packetId)>;
+using AsyncMQTT_cbConnect       =std::function<void(bool)>;
+using AsyncMQTT_cbDisconnect    =std::function<void(uint8_t)>;
+using AsyncMQTT_cbSubscribe     =std::function<void(uint16_t, uint8_t)>;
+using AsyncMQTT_cbUnsubscribe   =std::function<void(uint16_t)>;
+using AsyncMQTT_cbMessage       =std::function<void(const char*, uint8_t*, ASMQ_PROPS_t , size_t, size_t, size_t)>;
+using AsyncMQTT_cbPublish       =std::function<void(uint16_t packetId)>;
 
 class Packet;
 class ConnectPacket;
@@ -85,26 +87,25 @@ class AsyncMQTT: public AsyncClient {
         AsyncMQTT_cbPublish     _cbPublish=nullptr;
 
         static bool            _cleanSession;
-        static string          _clientId;
+        static std::string          _clientId;
                bool            _connected=false;
                char            _generatedClientId[19];  // esp8266-abc123 and esp32-abcdef123456 
-               string          _host;
+               std::string          _host;
                IPAddress       _ip;
         static uint16_t        _keepalive;
         static uint16_t        _maxRetries; 
                uint32_t        _nPollTicks=0;  
                uint32_t        _nSrvTicks=0;  
-        static string          _password;
+        static std::string          _password;
                uint16_t        _port;
                bool            _useIp;
-        static string          _username;
-        static string          _willPayload;
+        static std::string          _username;
+        static std::string          _willPayload;
         static uint8_t         _willQos;
         static bool            _willRetain;
-        static string          _willTopic;
+        static std::string          _willTopic;
 
                void            _cleanStart();
-               void            _clearGarbage();
                uint8_t*        _incomingPacket(uint8_t type,struct ASMQ_PROPS props,uint8_t* data, uint16_t len,bool synthetic=true);
         static uint16_t        _peek16(uint8_t* p){ return (*(p+1))|(*p << 8); }
         // TCP
@@ -136,8 +137,8 @@ class AsyncMQTT: public AsyncClient {
         static void            dumphex(const void *mem, uint32_t len, uint8_t cols=16);
                const char*     getClientId(){ return _clientId.c_str(); }
                uint16_t        publish(const char* topic, uint8_t qos, bool retain, uint8_t* payload = nullptr, size_t length = 0, bool dup = false);
-               uint16_t        publish(const char* topic, uint8_t qos, bool retain, string payload){ publish(topic,qos,retain, (uint8_t*) payload.data(), payload.size()); }
-               //uint16_t        publish(const char* topic, uint8_t qos, bool retain, String payload){ publish(topic,qos,retain, (uint8_t*) payload.c_str(), payload.length()); }
+               uint16_t        publish(const char* topic, uint8_t qos, bool retain, std::string payload){ publish(topic,qos,retain, (uint8_t*) payload.data(), payload.size()); }
+               //uint16_t        publish(const char* topic, uint8_t qos, bool retain, std::string payload){ publish(topic,qos,retain, (uint8_t*) payload.c_str(), payload.length()); }
                uint16_t        subscribe(const char* topic, uint8_t qos);
                uint16_t        unsubscribe(const char* topic);
 

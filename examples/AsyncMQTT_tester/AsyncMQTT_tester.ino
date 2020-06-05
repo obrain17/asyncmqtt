@@ -16,7 +16,7 @@ WiFiEventHandler wifiDisconnectHandler;
 Ticker wifiReconnectTimer;
 
 uint8_t  binaryPayload[200]={0x0,0x1,0x2,0x3};
-string  topic("blimey");
+std::string  topic("blimey");
 
 void connectToWifi() {
   Serial.println("Connecting to Wi-Fi...");
