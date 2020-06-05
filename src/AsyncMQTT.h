@@ -138,7 +138,6 @@ class AsyncMQTT: public AsyncClient {
                const char*     getClientId(){ return _clientId.c_str(); }
                uint16_t        publish(const char* topic, uint8_t qos, bool retain, uint8_t* payload = nullptr, size_t length = 0, bool dup = false);
                uint16_t        publish(const char* topic, uint8_t qos, bool retain, std::string payload){ publish(topic,qos,retain, (uint8_t*) payload.data(), payload.size()); }
-               //uint16_t        publish(const char* topic, uint8_t qos, bool retain, std::string payload){ publish(topic,qos,retain, (uint8_t*) payload.c_str(), payload.length()); }
                uint16_t        subscribe(const char* topic, uint8_t qos);
                uint16_t        unsubscribe(const char* topic);
 

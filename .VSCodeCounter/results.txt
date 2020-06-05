@@ -1,0 +1,39 @@
+Date : 2020-06-05 12:54:24
+Directory : c:\Users\phil\Documents\Arduino\libraries\asyncmqtt
+Total : 9 files,  781 codes, 16 comments, 102 blanks, all 899 lines
+
+Languages
++--------------------+------------+------------+------------+------------+------------+
+| language           | files      | code       | comment    | blank      | total      |
++--------------------+------------+------------+------------+------------+------------+
+| C++                |          6 |        758 |         16 |         95 |        869 |
+| Properties         |          1 |          9 |          0 |          1 |         10 |
+| JSON with Comments |          1 |          7 |          0 |          0 |          7 |
+| Markdown           |          1 |          7 |          0 |          6 |         13 |
++--------------------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                               | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                  |          9 |        781 |         16 |        102 |        899 |
+| examples                                                                                           |          1 |        105 |          0 |         26 |        131 |
+| examples\AsyncMQTT_tester                                                                          |          1 |        105 |          0 |         26 |        131 |
+| src                                                                                                |          5 |        653 |         16 |         69 |        738 |
++----------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| filename                                                                                           | language           | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\README.md                                      | Markdown           |          7 |          0 |          6 |         13 |
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\aworkingversion.code-workspace                 | JSON with Comments |          7 |          0 |          0 |          7 |
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\examples\AsyncMQTT_tester\AsyncMQTT_tester.ino | C++                |        105 |          0 |         26 |        131 |
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\library.properties                             | Properties         |          9 |          0 |          1 |         10 |
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\src\AsyncMQTT.cpp                              | C++                |        210 |          3 |         21 |        234 |
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\src\AsyncMQTT.h                                | C++                |        123 |          7 |         19 |        149 |
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\src\Packet.cpp                                 | C++                |        184 |          4 |         16 |        204 |
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\src\Packet.h                                   | C++                |        133 |          0 |         10 |        143 |
+| c:\Users\phil\Documents\Arduino\libraries\asyncmqtt\src\config.h                                   | C++                |          3 |          2 |          3 |          8 |
+| Total                                                                                              |                    |        781 |         16 |        102 |        899 |
++----------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
