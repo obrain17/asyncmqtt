@@ -6,10 +6,6 @@
 #include<string>
 #include<map>
 
-//using namespace::std::std::string;
-//using namespace::std::queue;
-//using namespace::std::map;
-
 #ifdef ARDUINO_ARCH_ESP32
 #include <AsyncTCP.h>
 #elif defined(ARDUINO_ARCH_ESP8266)
@@ -74,11 +70,24 @@ class Packet;
 class ConnectPacket;
 class PublishPacket;
 
+struct ASMQ_DECODED_PUB {
+    uint16_t        id;
+    uint8_t         qos;
+    bool            dup;
+    bool            retain;
+    std::string     topic;
+    uint8_t*        payload;
+    uint32_t        plen;
+};
+using ADP_t         = struct ASMQ_DECODED_PUB;
+
 class AsyncMQTT: public AsyncClient {
         friend class Packet;
         friend class ConnectPacket;
         friend class PublishPacket;
-
+//      Optimised packets
+            static   uint8_t  staticPing[];//={PINGREQ,0};
+            static   uint8_t  staticDisco[];//={DISCONNECT,0};
         AsyncMQTT_cbConnect     _cbConnect=nullptr;
         AsyncMQTT_cbDisconnect  _cbDisconnect=nullptr;
         AsyncMQTT_cbSubscribe   _cbSubscribe=nullptr;
@@ -87,26 +96,26 @@ class AsyncMQTT: public AsyncClient {
         AsyncMQTT_cbPublish     _cbPublish=nullptr;
 
         static bool            _cleanSession;
-        static std::string          _clientId;
+        static std::string     _clientId;
                bool            _connected=false;
                char            _generatedClientId[19];  // esp8266-abc123 and esp32-abcdef123456 
-               std::string          _host;
+               std::string     _host;
                IPAddress       _ip;
         static uint16_t        _keepalive;
         static uint16_t        _maxRetries; 
                uint32_t        _nPollTicks=0;  
                uint32_t        _nSrvTicks=0;  
-        static std::string          _password;
+        static std::string     _password;
                uint16_t        _port;
                bool            _useIp;
-        static std::string          _username;
-        static std::string          _willPayload;
+        static std::string     _username;
+        static std::string     _willPayload;
         static uint8_t         _willQos;
         static bool            _willRetain;
-        static std::string          _willTopic;
+        static std::string     _willTopic;
 
                void            _cleanStart();
-               uint8_t*        _incomingPacket(uint8_t type,struct ASMQ_PROPS props,uint8_t* data, uint16_t len,bool synthetic=true);
+               void            _incomingPacket(uint8_t* data, uint8_t offset,uint32_t pktlen,bool synthetic);
         static uint16_t        _peek16(uint8_t* p){ return (*(p+1))|(*p << 8); }
         // TCP
                void            _onData(uint8_t* data, size_t len,bool synthetic=false);

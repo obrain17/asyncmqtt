@@ -38,7 +38,7 @@ void connectToMqtt() {
   Serial.println("Connecting to MQTT...");
   mqttClient.connect();
 }
-#define QOS 2
+#define QOS 0
 
 void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT.");
@@ -50,6 +50,7 @@ void onMqttConnect(bool sessionPresent) {
 
   Serial.printf("Publishing %s at QoS %d\n",CSTR(topic),QOS);
   mqttClient.publish(CSTR(topic), QOS, false, (uint8_t*) "XXXX",4);
+  /*
   mqttClient.publish(CSTR(topic), QOS, false, binaryPayload,200);
 
   Serial.print("Publishing at QoS 1, packetId: ");
@@ -59,7 +60,7 @@ void onMqttConnect(bool sessionPresent) {
   Serial.print("Publishing at QoS 2, packetId: ");
   uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, (uint8_t*) "test 3",6);
   Serial.println(packetIdPub2);
-  
+  */
 }
 void onMqttDisconnect(uint8_t reason) {
   Serial.println("Disconnected from MQTT.");
@@ -122,7 +123,7 @@ void setup() {
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-  mqttClient.setCleanSession(false);
+  mqttClient.setCleanSession(true);
   mqttClient.setMaxRetries(2);
   connectToWifi();
 }
