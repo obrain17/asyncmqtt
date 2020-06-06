@@ -8,18 +8,18 @@ ADFP                                Packet::_unAcked=nullptr;
 uint16_t                            Packet::_uaId=0;;
 
 Packet::~Packet(){
-    if(!_blox.empty()) ASMQ_PRINT("FATAL PACKET %02x id=%d still has %d blox!!!\n",_controlcode,_id,_blox.size());
-    ASMQ_PRINT("PACKET %02x id=%d DIES: its data @ %08x hangs on!\n",_controlcode,_id);
+//    if(!_blox.empty()) ASMQ_PRINT("FATAL PACKET %02x id=%d still has %d blox!!!\n",_controlcode,_id,_blox.size());
+//  ASMQ_PRINT("PACKET %02x id=%d DIES: its data @ %08x hangs on!\n",_controlcode,_id);
 }
 
 void Packet::_ackTCP(size_t len, uint32_t time){
     if(_unAcked){
-        ASMQ_PRINT("TCP ACK len=%d time=%d ua=%08x typ=%02x uaId=%d\n",time,len,_unAcked,_unAcked[0],_uaId);
+//        ASMQ_PRINT("TCP ACK len=%d time=%d ua=%08x typ=%02x uaId=%d\n",time,len,_unAcked,_unAcked[0],_uaId);
         if((_unAcked[0] & 0xf0 == 0x30) && _uaId ){ 
             ASMQ_PRINT("QOS PUBLISH - DO NOT KILL!\n"); // the ptr is left hanging but lives in either _inbound or _outbound
         }
         else {
-            ASMQ_PRINT("GARBAGE: KILL %08x\n",_unAcked);
+//            ASMQ_PRINT("GARBAGE: KILL %08x\n",_unAcked);
             free(_unAcked);
             _unAcked=nullptr;
             _uaId=0;
@@ -79,7 +79,6 @@ void Packet::_build(bool hold){
 }
 
 void Packet::_clearMap(ASMQ_PACKET_MAP* m,ASMQ_RESEND_PRED pred){
-    ASMQ_PRINT("\nCLEARMAP\n");
     AsyncMQTT::dump();
     std::vector<uint16_t> morituri;
     for(auto const& p:*m) if(pred(p.second)) morituri.push_back(p.first);
@@ -105,7 +104,7 @@ struct ASMQ_DECODED_PUB {
 ADP_t   Packet::_decodePub(uint8_t* data,uint8_t offset,uint32_t length){
     ADP_t       dp;
     //ASMQ_PRINT("DECODE %08x %02x off=%d len=%d\n",data,data[0],offset, length);
-    AsyncMQTT::dumphex(data,length);
+    //AsyncMQTT::dumphex(data,length);
     uint8_t     bits=data[0] & 0x0f;
     dp.dup=(bits & 0x8) >> 3;
     dp.qos=(bits & 0x6) >> 1;
@@ -197,9 +196,9 @@ bool Packet::_predOutbound(ADFP p){
 }
 
 void Packet::_release(uint8_t* base,size_t len){
-    AsyncMQTT::dumphex(base,len);
+//    AsyncMQTT::dumphex(base,len);
     if(_caller->canSend()){
-        ASMQ_PRINT("_SEND %08x %02x\n",(void*)base,base[0]);
+//        ASMQ_PRINT("_SEND %08x %02x\n",(void*)base,base[0]);
         _caller->add((const char*) base,len); // ESPAsyncTCP is WRONG on this, it should be a uint8_t*
         _caller->send();
         _unAcked=base; // save addres of "floating" unfreed packet so _ACK can use it
