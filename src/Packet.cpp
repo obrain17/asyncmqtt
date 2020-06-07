@@ -14,7 +14,7 @@ Packet::~Packet(){
 
 void Packet::_ackTCP(size_t len, uint32_t time){
     if(_unAcked){
-//        ASMQ_PRINT("TCP ACK len=%d time=%d ua=%08x typ=%02x uaId=%d\n",time,len,_unAcked,_unAcked[0],_uaId);
+        ASMQ_PRINT("TCP ACK len=%d time=%d ua=%08x typ=%02x uaId=%d\n",time,len,_unAcked,_unAcked[0],_uaId);
         if((_unAcked[0] & 0xf0 == 0x30) && _uaId ){ 
             ASMQ_PRINT("QOS PUBLISH - DO NOT KILL!\n"); // the ptr is left hanging but lives in either _inbound or _outbound
         }
@@ -78,6 +78,15 @@ void Packet::_build(bool hold){
     if(!hold) _release(base,sx);
 }
 
+void Packet::_clearFlowControlQ(){
+    while(!_flowControl.empty()){
+        ASMQ_PRINT("FQ: %08x %02x freed\n",_flowControl.front(),_flowControl.front()[0]);
+        free(_flowControl.front());
+        _flowControl.pop();
+    }
+    _unAcked=nullptr;
+    _uaId=0;
+}
 void Packet::_clearMap(ASMQ_PACKET_MAP* m,ASMQ_RESEND_PRED pred){
     AsyncMQTT::dump();
     std::vector<uint16_t> morituri;
@@ -92,18 +101,18 @@ void Packet::_clearPacketMap(ASMQ_RESEND_PRED ipred,ASMQ_RESEND_PRED opred){
 /*
 struct ASMQ_DECODED_PUB {
     uint16_t        id;
-    bool            dup;
     uint8_t         qos;
+    bool            dup;
     bool            retain;
     std::string     topic;
     uint8_t*        payload;
     uint32_t        plen;
 };
-*/
 
+*/
 ADP_t   Packet::_decodePub(uint8_t* data,uint8_t offset,uint32_t length){
     ADP_t       dp;
-    //ASMQ_PRINT("DECODE %08x %02x off=%d len=%d\n",data,data[0],offset, length);
+//    ASMQ_PRINT("DECODE %08x %02x off=%d len=%d\n",data,data[0],offset, length);
     //AsyncMQTT::dumphex(data,length);
     uint8_t     bits=data[0] & 0x0f;
     dp.dup=(bits & 0x8) >> 3;
@@ -112,9 +121,7 @@ ADP_t   Packet::_decodePub(uint8_t* data,uint8_t offset,uint32_t length){
 
     uint8_t* p=data+1+offset;
     dp.id=0;
-//    ASMQ_PRINT("DECODE %08x",p);
     size_t tlen=AsyncMQTT::_peek16(p);p+=2;
-//    ASMQ_PRINT(" TL=%d\n",tlen);
     char c_topic[tlen+1];
     memcpy(&c_topic[0],p,tlen);c_topic[tlen]='\0';
     dp.topic.assign(&c_topic[0],tlen+1);
@@ -125,11 +132,11 @@ ADP_t   Packet::_decodePub(uint8_t* data,uint8_t offset,uint32_t length){
     }
     dp.plen=data+length-p;
     dp.payload=p;
-//    ASMQ_PRINT("DECODE %s id=%d p=%08x plen=%d\n",CSTR(dp.topic),dp.id,p,dp.plen);
+//    ASMQ_PRINT("DECODE %s id=%d p=%08x plen=%d q=%d r=%d d=%d\n",CSTR(dp.topic),dp.id,p,dp.plen,dp.qos,dp.retain,dp.dup);
     return dp;
 }
 
-std::pair<uint32_t,uint8_t> Packet::_getrl(uint8_t* p){
+ASMQ_REM_LENGTH Packet::_getrl(uint8_t* p){
     uint32_t multiplier = 1;
     uint32_t value = 0;
     uint8_t encodedByte,len=0;
@@ -162,7 +169,7 @@ uint8_t* Packet::_mem(const void* v,size_t size){
 }
 
 uint32_t Packet::_packetLength(ADFP p){
-    std::pair<uint32_t,uint8_t>grl=_getrl(&p[1]); // tidy into this
+    ASMQ_REM_LENGTH grl=_getrl(&p[1]); // tidy into this
 //    ASMQ_PRINT("PL @ %08x RL=%d LPL=%d PL=%d\n",p,grl.first,grl.second,grl.first+1+grl.second);
     return grl.first+1+grl.second;
 }
@@ -175,7 +182,7 @@ uint8_t* Packet::_poke16(uint8_t* p,uint16_t u){
 
 bool Packet::_predInbound(ADFP p){
     ASMQ_PRINT("INBOUND RESEND? %08x %02x\n",p,p[0]);
-    std::pair<uint32_t,uint8_t>grl=Packet::_getrl(&p[1]); // tidy into this
+    ASMQ_REM_LENGTH grl=Packet::_getrl(&p[1]); // tidy into this
     ASMQ_PRINT("INBOUND RESEND? PL=%d LPL=%d \n",grl.first,grl.second);
     ADP_t dp=_decodePub(p,grl.second,grl.first);
     ASMQ_PRINT("INBOUND RESEND? id=%d qos=%d\n",dp.id,dp.qos);
@@ -184,7 +191,7 @@ bool Packet::_predInbound(ADFP p){
 
 bool Packet::_predOutbound(ADFP p){
     ASMQ_PRINT("OUTBOUND RESEND? %08x %02x\n",p,p[0]);
-    std::pair<uint32_t,uint8_t>grl=Packet::_getrl(&p[1]); // tidy into this
+    ASMQ_REM_LENGTH grl=Packet::_getrl(&p[1]); // tidy into this
     ADP_t dp=_decodePub(p,grl.second,grl.first);
     ASMQ_PRINT("OUTBOUND RESEND? id=%d qos=%d\n",dp.id,dp.qos);
     if(dp.qos==1){
@@ -203,11 +210,7 @@ void Packet::_release(uint8_t* base,size_t len){
         _caller->send();
         _unAcked=base; // save addres of "floating" unfreed packet so _ACK can use it
     }
-    else {
-        ASMQ_PRINT("FLOW CONTROL %08x %02x id=0 INFLIGHT\n",_unAcked,_unAcked[0],_uaId);
-        _flowControl.push(base);
-//        ASMQ_PRINT("%d QUEUED\n",_flowControl.size());
-    }
+    else _flowControl.push(base);
 }
 
 std::vector<uint8_t> Packet::_rl(uint32_t X){
@@ -230,7 +233,6 @@ void Packet::_shortGarbage(){
 }
 
 ConnectPacket::ConnectPacket(): Packet(CONNECT,10){
-    ASMQ_PRINT("CONNECT\n");
     _begin=[this]{
         if(AsyncMQTT::_cleanSession) protocol[7]|=CLEAN_SESSION;
         if(AsyncMQTT::_willRetain) protocol[7]|=WILL_RETAIN;

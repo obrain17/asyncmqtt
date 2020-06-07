@@ -33,6 +33,7 @@ using ASMQ_FN_U8PTRU8     = std::function<uint8_t*(uint8_t*)>;
 using ASMQ_PACKET_MAP     = std::map<uint16_t,ADFP>; // indexed by messageId
 using ASMQ_BLOCK_Q        = std::queue<ASYNC_MQTT_BLOCK>;
 using ASMQ_RESEND_PRED    = std::function<bool(ADFP)>;
+using ASMQ_REM_LENGTH     = std::pair<uint32_t,uint8_t>;
 
 class Packet {
     friend class AsyncMQTT;
@@ -57,9 +58,10 @@ class Packet {
         static  void             _ACK(ASMQ_PACKET_MAP* m,uint16_t id);
                 uint8_t*         _block(size_t size);
                 void	         _build(bool hold=false);
+        static  void             _clearFlowControlQ();
         static  void             _clearMap(ASMQ_PACKET_MAP* m,ASMQ_RESEND_PRED pred);
         static  void             _clearPacketMap(ASMQ_RESEND_PRED ipred,ASMQ_RESEND_PRED opred);
-        static  std::pair<uint32_t,uint8_t> _getrl(uint8_t* p);
+        static  ASMQ_REM_LENGTH  _getrl(uint8_t* p);
         static  ADP_t            _decodePub(uint8_t* data,uint8_t offset,uint32_t length);
                 void             _idGarbage(uint16_t id);
                 void             _initId();

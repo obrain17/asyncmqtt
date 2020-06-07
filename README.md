@@ -7,6 +7,8 @@ update: 5/6/2020: Tested on ESP32, seems fine but would appreciate some more tes
 Testing / evaluation purposes only: use @ yer own risk etc
 
 
+7/6/2020 v0.0.4  fixed reconnect bug (Thanks to Hamzah Hajeir)
+
 6/6/2020 v0.0.3  major restructure: GC removed, TCP flow control replaces it
                 VERY ROUGH, tons of diags in it, some scabby code..this is JUST to confirm previous nasty bug gone
                 Qos0 ONLY!!!!

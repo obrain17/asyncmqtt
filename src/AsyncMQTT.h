@@ -48,7 +48,9 @@ enum : int8_t {
   MQTT_MALFORMED_CREDENTIALS = 4,
   MQTT_NOT_AUTHORIZED = 5,
 //  ESP8266_NOT_ENOUGH_SPACE = 6,
-  TLS_BAD_FINGERPRINT = 7
+  TLS_BAD_FINGERPRINT = 7,
+  TCP_TIMEOUT,
+  FORCED_BY_USER
 };
 
 struct ASMQ_PROPS {
@@ -60,7 +62,7 @@ struct ASMQ_PROPS {
 using ASMQ_PROPS_t              = struct ASMQ_PROPS;
 
 using AsyncMQTT_cbConnect       =std::function<void(bool)>;
-using AsyncMQTT_cbDisconnect    =std::function<void(uint8_t)>;
+using AsyncMQTT_cbDisconnect    =std::function<void(int8_t)>;
 using AsyncMQTT_cbSubscribe     =std::function<void(uint16_t, uint8_t)>;
 using AsyncMQTT_cbUnsubscribe   =std::function<void(uint16_t)>;
 using AsyncMQTT_cbMessage       =std::function<void(const char*, uint8_t*, ASMQ_PROPS_t , size_t, size_t, size_t)>;
@@ -81,13 +83,11 @@ struct ASMQ_DECODED_PUB {
 };
 using ADP_t         = struct ASMQ_DECODED_PUB;
 
-class AsyncMQTT: public AsyncClient {
+class AsyncMQTT {
         friend class Packet;
         friend class ConnectPacket;
         friend class PublishPacket;
-//      Optimised packets
-            static   uint8_t  staticPing[];//={PINGREQ,0};
-            static   uint8_t  staticDisco[];//={DISCONNECT,0};
+        
         AsyncMQTT_cbConnect     _cbConnect=nullptr;
         AsyncMQTT_cbDisconnect  _cbDisconnect=nullptr;
         AsyncMQTT_cbSubscribe   _cbSubscribe=nullptr;
@@ -115,11 +115,13 @@ class AsyncMQTT: public AsyncClient {
         static std::string     _willTopic;
 
                void            _cleanStart();
+               void            _createClient();
+               void            _destroyClient();
                void            _incomingPacket(uint8_t* data, uint8_t offset,uint32_t pktlen,bool synthetic);
         static uint16_t        _peek16(uint8_t* p){ return (*(p+1))|(*p << 8); }
         // TCP
                void            _onData(uint8_t* data, size_t len,bool synthetic=false);
-               void            _onDisconnect(uint8_t r);
+               void            _onDisconnect(int8_t r);
                void            _onPoll(AsyncClient* client);
     public:
         AsyncMQTT();

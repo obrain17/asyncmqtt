@@ -8,6 +8,8 @@
 #define MQTT_HOST IPAddress(192, 168, 1,21)
 #define MQTT_PORT 1883
 
+#define RC_DELAY  8
+
 AsyncMQTT mqttClient;
 Ticker mqttReconnectTimer;
 
@@ -17,7 +19,7 @@ Ticker wifiReconnectTimer;
 
 uint8_t  binaryPayload[200]={0x0,0x1,0x2,0x3};
 std::string  topic("blimey");
-Ticker T;
+Ticker T,T2;
 
 void connectToWifi() {
   Serial.println("Connecting to Wi-Fi...");
@@ -32,7 +34,7 @@ void onWifiConnect(const WiFiEventStationModeGotIP& event) {
 void onWifiDisconnect(const WiFiEventStationModeDisconnected& event) {
   Serial.println("Disconnected from Wi-Fi.");
   mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-  wifiReconnectTimer.once(2, connectToWifi);
+  wifiReconnectTimer.once(RC_DELAY , connectToWifi);
 }
 
 void connectToMqtt() {
@@ -43,17 +45,16 @@ void connectToMqtt() {
 #define QOS 0
 
 void onMqttConnect(bool sessionPresent) {
-  Serial.println("Connected to MQTT.");
-  Serial.print("Session present: ");
-  Serial.println(sessionPresent);
+  Serial.printf("Connected to MQTT. session=%d\n",sessionPresent);
 
   int16_t packetIdSub = mqttClient.subscribe(CSTR(topic), QOS);
   Serial.printf("Subscribing to %s at QoS %d, packetId: %d\n",CSTR(topic),QOS,packetIdSub);
 
   T.attach(5,[]{
     uint32_t heap=ESP.getFreeHeap();
-    Serial.printf("Publish heap=%u to %s at QoS %d\n",heap,CSTR(topic),QOS);
-    mqttClient.publish(CSTR(topic), QOS, false, (uint8_t*) &heap,sizeof(uint32_t));
+    Serial.printf("T=%u Publish heap=%u to %s at QoS %d\n",millis(),heap,CSTR(topic),QOS);
+    //mqttClient.publish(CSTR(topic), QOS, false, (uint8_t*) &heap, sizeof(uint32_t));
+    mqttClient.publish(CSTR(topic), QOS, false, (uint8_t*) "AAAA" ,4);
   });
   /*
   mqttClient.publish(CSTR(topic), QOS, false, binaryPayload,200);
@@ -67,11 +68,12 @@ void onMqttConnect(bool sessionPresent) {
   Serial.println(packetIdPub2);
   */
 }
-void onMqttDisconnect(uint8_t reason) {
-  Serial.println("Disconnected from MQTT.");
+
+void onMqttDisconnect(int8_t reason) {
+  Serial.printf("Disconnected from MQTT. r=%d\n",reason);
   T.detach();
   if (WiFi.isConnected()) {
-    mqttReconnectTimer.once(2, connectToMqtt);
+    mqttReconnectTimer.once(RC_DELAY  , connectToMqtt);
   }
 }
 
@@ -90,10 +92,10 @@ void onMqttUnsubscribe(uint16_t packetId) {
 }
 
 void onMqttMessage(const char* topic, uint8_t* payload, ASMQ_PROPS_t prop, size_t len, size_t index, size_t total) {
-    //mqttClient.dumphex(payload,len);
-    uint32_t heap;
-    memcpy(&heap,payload,len);
-    Serial.printf("Publish received topic=%s heap=%u q=%d d=%d r=%d len=%d\n",topic,heap,prop.qos,prop.dup,prop,prop.retain,len);
+    mqttClient.dumphex(payload,len);
+    //uint32_t heap;
+    //memcpy(&heap,payload,index);
+    Serial.printf("topic=%s q=%d d=%d r=%d len=%d i=%d total=%d\n",topic,prop.qos,prop.dup,prop.retain,len,index,total);
 }
 
 void onMqttPublish(uint16_t packetId) {
@@ -104,8 +106,6 @@ void onMqttPublish(uint16_t packetId) {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println();
-  Serial.println();
 
   wifiConnectHandler = WiFi.onStationModeGotIP(onWifiConnect);
   wifiDisconnectHandler = WiFi.onStationModeDisconnected(onWifiDisconnect);
@@ -121,6 +121,9 @@ void setup() {
   mqttClient.setCleanSession(true);
   mqttClient.setMaxRetries(2);
   connectToWifi();
+  T2.attach(1,[]{
+    Serial.printf("T=%u heap=%u\n",millis(),ESP.getFreeHeap());
+  });
 }
 
 void loop() {}
