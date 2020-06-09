@@ -39,6 +39,8 @@ class Packet {
     friend class AsyncMQTT;
         static  std::queue<ADFP>  _flowControl;
     protected:
+
+        static  bool             _pcb_busy;
         static  ADFP             _unAcked;
         static  uint16_t         _uaId;
         static  uint16_t         _nextId;
@@ -76,7 +78,7 @@ class Packet {
                 uint8_t*         _stringblock(const std::string& s){ return _mem(s.data(),s.size()); }
             
     public:
-        Packet(uint8_t controlcode,uint8_t adj=0,bool hasid=false): _controlcode(controlcode),_hdrAdjust(adj),_hasId(hasid){}
+        Packet(uint8_t controlcode,uint8_t adj=0,bool hasid=false): _hdrAdjust(adj),_hasId(hasid),_controlcode(controlcode){}
         virtual ~Packet();
 
     static  void        ACKinbound(uint16_t id){ _ACK(&_inbound,id); }
@@ -116,7 +118,7 @@ class SubscribePacket: public Packet {
         std::string          _topic;
     public:
         uint8_t         _qos;
-        SubscribePacket(const std::string& topic,uint8_t qos): _topic(topic),_qos(qos),Packet(SUBSCRIBE,1,true) {
+        SubscribePacket(const std::string& topic,uint8_t qos): Packet(SUBSCRIBE,1,true),_topic(topic),_qos(qos) {
             _id=++_nextId;
             _begin=[this]{ _stringblock(CSTR(_topic)); };
             _end=[this](uint8_t* p,ADFP base){ *p=_qos; };
@@ -126,7 +128,7 @@ class SubscribePacket: public Packet {
 class UnsubscribePacket: public Packet {
         std::string          _topic;
     public:
-        UnsubscribePacket(const std::string& topic): _topic(topic),Packet(UNSUBSCRIBE,1,false) {
+        UnsubscribePacket(const std::string& topic): Packet(UNSUBSCRIBE,1,false),_topic(topic) {
             _id=++_nextId;
             _begin=[this]{ _stringblock(CSTR(_topic)); };
             _build();

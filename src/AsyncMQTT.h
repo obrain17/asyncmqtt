@@ -123,6 +123,7 @@ class AsyncMQTT {
                void            _onData(uint8_t* data, size_t len,bool synthetic=false);
                void            _onDisconnect(int8_t r);
                void            _onPoll(AsyncClient* client);
+               void            _onTimeout(AsyncClient* client, uint32_t time);
     public:
         AsyncMQTT();
 
@@ -148,7 +149,7 @@ class AsyncMQTT {
         static void            dumphex(const void *mem, uint32_t len, uint8_t cols=16);
                const char*     getClientId(){ return _clientId.c_str(); }
                uint16_t        publish(const char* topic, uint8_t qos, bool retain, uint8_t* payload = nullptr, size_t length = 0, bool dup = false);
-               uint16_t        publish(const char* topic, uint8_t qos, bool retain, std::string payload){ publish(topic,qos,retain, (uint8_t*) payload.data(), payload.size()); }
+               uint16_t        publish(const char* topic, uint8_t qos, bool retain, std::string payload){ return publish(topic,qos,retain, (uint8_t*) payload.data(), payload.size()); }
                uint16_t        subscribe(const char* topic, uint8_t qos);
                uint16_t        unsubscribe(const char* topic);
 

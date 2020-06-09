@@ -6,6 +6,7 @@ ASMQ_PACKET_MAP                     Packet::_outbound;
 std::queue<ADFP>                    Packet::_flowControl;
 ADFP                                Packet::_unAcked=nullptr;
 uint16_t                            Packet::_uaId=0;;
+bool                                Packet::_pcb_busy=false;
 
 Packet::~Packet(){
 //    if(!_blox.empty()) ASMQ_PRINT("FATAL PACKET %02x id=%d still has %d blox!!!\n",_controlcode,_id,_blox.size());
@@ -14,8 +15,9 @@ Packet::~Packet(){
 
 void Packet::_ackTCP(size_t len, uint32_t time){
     if(_unAcked){
+        _pcb_busy = false;
         ASMQ_PRINT("TCP ACK len=%d time=%d ua=%08x typ=%02x uaId=%d\n",time,len,_unAcked,_unAcked[0],_uaId);
-        if((_unAcked[0] & 0xf0 == 0x30) && _uaId ){ 
+        if(((_unAcked[0] & 0xf0) == 0x30) && _uaId ){ 
             ASMQ_PRINT("QOS PUBLISH - DO NOT KILL!\n"); // the ptr is left hanging but lives in either _inbound or _outbound
         }
         else {
@@ -84,6 +86,7 @@ void Packet::_clearFlowControlQ(){
         free(_flowControl.front());
         _flowControl.pop();
     }
+
     _unAcked=nullptr;
     _uaId=0;
 }
@@ -153,7 +156,7 @@ void Packet::_idGarbage(uint16_t id){
     ADFP p=static_cast<uint8_t*>(malloc(4));
     p[0]=_controlcode;
     p[1]=_controlcode=2;
-    _poke16(p,id);
+    _poke16(&p[2],id);
     _release(p,4);
 }
 
@@ -204,10 +207,12 @@ bool Packet::_predOutbound(ADFP p){
 
 void Packet::_release(uint8_t* base,size_t len){
 //    AsyncMQTT::dumphex(base,len);
-    if(_caller->canSend()){
+
+    if ((!_pcb_busy) && (_caller->canSend())){
 //        ASMQ_PRINT("_SEND %08x %02x\n",(void*)base,base[0]);
         _caller->add((const char*) base,len); // ESPAsyncTCP is WRONG on this, it should be a uint8_t*
         _caller->send();
+        _pcb_busy = true;
         _unAcked=base; // save addres of "floating" unfreed packet so _ACK can use it
     }
     else _flowControl.push(base);
@@ -256,11 +261,12 @@ ConnectPacket::ConnectPacket(): Packet(CONNECT,10){
         memcpy(p,&protocol,8);p+=8;
         return _poke16(p,AsyncMQTT::_keepalive);
     };
+    
     _build();
 }
 
 PublishPacket::PublishPacket(const char* topic, uint8_t qos, bool retain, uint8_t* payload, size_t length, bool dup,uint16_t givenId):
-    _topic(topic),_qos(qos),_retain(retain),_length(length),_dup(dup),_givenId(givenId),Packet(PUBLISH) {
+    Packet(PUBLISH),_topic(topic),_qos(qos),_retain(retain),_length(length),_dup(dup),_givenId(givenId) {
         _retries=AsyncMQTT::_maxRetries;
         _begin=[this]{ 
             _stringblock(CSTR(_topic));
