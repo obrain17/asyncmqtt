@@ -13,11 +13,13 @@ Packet::~Packet(){
 //  ASMQ_PRINT("PACKET %02x id=%d DIES: its data @ %08x hangs on!\n",_controlcode,_id);
 }
 
-void Packet::_ackTCP(size_t len, uint32_t time){
+void Packet::_ackTCP(size_t len, uint32_t time, bool timedout){
+    _pcb_busy = false;
+     if (timedout) ASMQ_PRINT("Ack-Timeout %u\n", time);
+
     if(_unAcked){
-        _pcb_busy = false;
         ASMQ_PRINT("TCP ACK len=%d time=%d ua=%08x typ=%02x uaId=%d\n",time,len,_unAcked,_unAcked[0],_uaId);
-        if(((_unAcked[0] & 0xf0) == 0x30) && _uaId ){ 
+        if(((_unAcked[0] & 0xf0) == 0x30) && _uaId ){
             ASMQ_PRINT("QOS PUBLISH - DO NOT KILL!\n"); // the ptr is left hanging but lives in either _inbound or _outbound
         }
         else {
@@ -91,7 +93,7 @@ void Packet::_clearFlowControlQ(){
     _uaId=0;
 }
 void Packet::_clearMap(ASMQ_PACKET_MAP* m,ASMQ_RESEND_PRED pred){
-    AsyncMQTT::dump();
+//    AsyncMQTT::dump();
     std::vector<uint16_t> morituri;
     for(auto const& p:*m) if(pred(p.second)) morituri.push_back(p.first);
     for(auto const& i:morituri) _ACK(m,i);
@@ -259,16 +261,16 @@ ConnectPacket::ConnectPacket(): Packet(CONNECT,10){
     };
     _middle=[this](uint8_t* p){
         memcpy(p,&protocol,8);p+=8;
-        return _poke16(p,AsyncMQTT::_keepalive);
+/*RO*/        return _poke16(p,AsyncMQTT::_keepalive / ASMQ_POLL_RATE);
     };
-    
+
     _build();
 }
 
 PublishPacket::PublishPacket(const char* topic, uint8_t qos, bool retain, uint8_t* payload, size_t length, bool dup,uint16_t givenId):
     Packet(PUBLISH),_topic(topic),_qos(qos),_retain(retain),_length(length),_dup(dup),_givenId(givenId) {
         _retries=AsyncMQTT::_maxRetries;
-        _begin=[this]{ 
+        _begin=[this]{
             _stringblock(CSTR(_topic));
             _bs+=_length;
             byte flags=_retain;

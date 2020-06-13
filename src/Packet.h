@@ -56,7 +56,7 @@ class Packet {
                 ASMQ_FN_U8PTRU8  _middle=[](uint8_t* p){ return p; };
                 ASMQ_FN_U8PTR    _end=[](uint8_t* p,ADFP base){};
 
-        static  void             _ackTCP(size_t len, uint32_t time);
+        static  void             _ackTCP(size_t len, uint32_t time, bool timedout=false);
         static  void             _ACK(ASMQ_PACKET_MAP* m,uint16_t id);
                 uint8_t*         _block(size_t size);
                 void	         _build(bool hold=false);

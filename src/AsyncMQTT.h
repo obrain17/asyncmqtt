@@ -123,7 +123,6 @@ class AsyncMQTT {
                void            _onData(uint8_t* data, size_t len,bool synthetic=false);
                void            _onDisconnect(int8_t r);
                void            _onPoll(AsyncClient* client);
-               void            _onTimeout(AsyncClient* client, uint32_t time);
     public:
         AsyncMQTT();
 
