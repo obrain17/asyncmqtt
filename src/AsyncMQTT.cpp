@@ -45,7 +45,7 @@ void AsyncMQTT::_createClient(){
     _caller->onAck([this](void* obj, AsyncClient* c,size_t len, uint32_t time){ Packet::_ackTCP(len,time); }); 
 //    _caller->onError([this](void* obj, AsyncClient* c, int8_t error) { _onDisconnect(77); });
 //    _caller->onTimeout([this](void* obj, AsyncClient* c, uint32_t time) { _onDisconnect(88); });
-    _caller->onTimeout([this](void* obj, AsyncClient* c, uint32_t time) { Packet::_ackTCP(0,time,true);});
+    _caller->onTimeout([this](void* obj, AsyncClient* c, uint32_t time) { _onTimeout(time);});
     _caller->onData([this](void* obj, AsyncClient* c, void* data, size_t len) { _onData(static_cast<uint8_t*>(data), len,false); });
     _caller->onPoll([this](void* obj, AsyncClient* c) { _onPoll(c); });
 }
@@ -98,6 +98,8 @@ void AsyncMQTT::setServer(const char* host, uint16_t port) {
 void AsyncMQTT::_onDisconnect(int8_t r) {
     ASMQ_PRINT("_onDisconnect %d\n",r);
     if(_connected){
+        Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound);
+        Packet::_clearFlowControlQ();
         ASMQ_PRINT("DELETE ????? %d\n",r);
         _destroyClient();
         if(_cbDisconnect) _cbDisconnect(r);
@@ -206,6 +208,27 @@ void AsyncMQTT::_onPoll(AsyncClient* client) {
         }
     }
 }
+
+void AsyncMQTT::_onTimeout(uint32_t time){
+    Packet::_pcb_busy = false;
+    ASMQ_PRINT("Ack-Timeout %u\n", time);
+
+    if(Packet::_unAcked){
+        ASMQ_PRINT("TCP ACK len=%d time=%d ua=%08x typ=%02x uaId=%d\n",time,0,Packet::_unAcked,Packet::_unAcked[0],Packet::_uaId);
+        if(((Packet::_unAcked[0] & 0xf0) == 0x30) && Packet::_uaId ){
+            ASMQ_PRINT("QOS PUBLISH - DO NOT KILL!\n"); // the ptr is left hanging but lives in either _inbound or _outbound
+        }
+        else {
+//            ASMQ_PRINT("GARBAGE: KILL %08x\n",_unAcked);
+            free(Packet::_unAcked);
+            Packet::_unAcked=nullptr;
+            Packet::_uaId=0;
+        }
+    } else ASMQ_PRINT("FATAL!: ACK WITH NO OUTBOUND !\n");
+
+    _onDisconnect(88);  // will clear both _flowControl and PacketMaps
+}
+
 
 void AsyncMQTT::connect() {
     if (_connected) return;

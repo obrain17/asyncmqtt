@@ -13,9 +13,8 @@ Packet::~Packet(){
 //  ASMQ_PRINT("PACKET %02x id=%d DIES: its data @ %08x hangs on!\n",_controlcode,_id);
 }
 
-void Packet::_ackTCP(size_t len, uint32_t time, bool timedout){
+void Packet::_ackTCP(size_t len, uint32_t time){
     _pcb_busy = false;
-     if (timedout) ASMQ_PRINT("Ack-Timeout %u\n", time);
 
     if(_unAcked){
         ASMQ_PRINT("TCP ACK len=%d time=%d ua=%08x typ=%02x uaId=%d\n",time,len,_unAcked,_unAcked[0],_uaId);
@@ -261,7 +260,7 @@ ConnectPacket::ConnectPacket(): Packet(CONNECT,10){
     };
     _middle=[this](uint8_t* p){
         memcpy(p,&protocol,8);p+=8;
-/*RO*/        return _poke16(p,AsyncMQTT::_keepalive / ASMQ_POLL_RATE);
+        return _poke16(p,AsyncMQTT::_keepalive / ASMQ_POLL_RATE);
     };
 
     _build();
