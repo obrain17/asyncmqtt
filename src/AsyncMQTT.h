@@ -28,7 +28,7 @@ enum :uint8_t {
     CONNACK     = 0x20, // x
     PUBLISH     = 0x30, // x
     PUBACK      = 0x40, // x
-    PUBREC      = 0x50, 
+    PUBREC      = 0x50,
     PUBREL      = 0x62,
     PUBCOMP     = 0x70,
     SUBSCRIBE   = 0x82, // x
@@ -87,7 +87,7 @@ class AsyncMQTT {
         friend class Packet;
         friend class ConnectPacket;
         friend class PublishPacket;
-        
+
         AsyncMQTT_cbConnect     _cbConnect=nullptr;
         AsyncMQTT_cbDisconnect  _cbDisconnect=nullptr;
         AsyncMQTT_cbSubscribe   _cbSubscribe=nullptr;
@@ -98,13 +98,15 @@ class AsyncMQTT {
         static bool            _cleanSession;
         static std::string     _clientId;
                bool            _connected=false;
-               char            _generatedClientId[19];  // esp8266-abc123 and esp32-abcdef123456 
+               char            _generatedClientId[19];  // esp8266-abc123 and esp32-abcdef123456
                std::string     _host;
                IPAddress       _ip;
         static uint16_t        _keepalive;
-        static uint16_t        _maxRetries; 
-               uint32_t        _nPollTicks=0;  
-               uint32_t        _nSrvTicks=0;  
+        static uint16_t        _maxRetries;
+        static uint32_t        _nPollTicks;      // since last sent by client
+               uint32_t        _nSrvTicks=0;     // since last received from server
+               uint32_t        _nPingTicks=0;    // since last PINGRESP received
+               bool            _PingSent=false;  // waiting for PINGRESP
         static std::string     _password;
                uint16_t        _port;
                bool            _useIp;

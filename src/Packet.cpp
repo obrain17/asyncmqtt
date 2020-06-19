@@ -214,7 +214,8 @@ void Packet::_release(uint8_t* base,size_t len){
         _caller->add((const char*) base,len); // ESPAsyncTCP is WRONG on this, it should be a uint8_t*
         _caller->send();
         _pcb_busy = true;
-        _unAcked=base; // save addres of "floating" unfreed packet so _ACK can use it
+        _unAcked=base; // save address of "floating" unfreed packet so _ACK can use it
+        AsyncMQTT::_nPollTicks=0;
     }
     else _flowControl.push(base);
 }
@@ -276,7 +277,7 @@ PublishPacket::PublishPacket(const char* topic, uint8_t qos, bool retain, uint8_
             flags|=(_dup << 3);
         //
             if(_qos) {
-                _id=_givenId || ++_nextId;
+                _id=_givenId ? _givenId : ++_nextId;
                 flags|=(_qos << 1);
                 _bs+=2; // because Packet id will be added
             }

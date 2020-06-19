@@ -13,6 +13,7 @@ uint16_t             AsyncMQTT::_keepalive=15 * ASMQ_POLL_RATE; // 10 seconds
 bool                 AsyncMQTT::_cleanSession;
 std::string          AsyncMQTT::_clientId;
 uint16_t             AsyncMQTT::_maxRetries=ASMQ_MAX_RETRIES; 
+uint32_t             AsyncMQTT::_nPollTicks=0;
 
 namespace ASMQ {
     void dumphex(const void *mem, uint32_t len, uint8_t cols) {
@@ -111,6 +112,7 @@ void AsyncMQTT::_incomingPacket(uint8_t* data, uint8_t offset,uint32_t pktlen,bo
     uint8_t*    i=data+1+offset;
 //    ASMQ_PRINT("INBOUND type %02x\n",data[0]);
 //    AsyncMQTT::dumphex(data,pktlen);
+    if(!synthetic) _nSrvTicks=0;
     switch (data[0]){
         case CONNACK:
             if(Packet::_flowControl.size()){
@@ -119,7 +121,7 @@ void AsyncMQTT::_incomingPacket(uint8_t* data, uint8_t offset,uint32_t pktlen,bo
             if(i[1]) _onDisconnect(i[1]);
             else {
                 _connected = true;
-                _nPollTicks=_nSrvTicks=0;
+                _nPollTicks=_nSrvTicks=_nPingTicks=0;
                 bool session=i[0] & 0x01;
                 if(!session) _cleanStart();
                 else Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound);
@@ -127,7 +129,8 @@ void AsyncMQTT::_incomingPacket(uint8_t* data, uint8_t offset,uint32_t pktlen,bo
             }
             break;
         case PINGRESP:
-            _nSrvTicks=0;
+            _nPingTicks=0;
+            _PingSent = false;
             break;
         case SUBACK:
             if(_cbSubscribe) _cbSubscribe(_peek16(i),(data[0] & 0x6) >> 3);
@@ -193,19 +196,29 @@ void AsyncMQTT::_onData(uint8_t* data, size_t len,bool synthetic) {
     } while (&data[0] + len - p);
 }
 
+#define CLEAR_PACKET_TICKS (5 * ASMQ_POLL_RATE)  // Clear Packets after server idle for 5 seconds
+
 void AsyncMQTT::_onPoll(AsyncClient* client) {
-    ASMQ_PRINT("T=%u poll P=%d S=%d\n",millis(),_nPollTicks,_nSrvTicks);
+    ASMQ_PRINT("T=%u poll C=%d S=%d P=%d\n",millis(),_nPollTicks,_nSrvTicks,_nPingTicks);
     if(_connected){
+        uint32_t _pollserver = (_keepalive > CLEAR_PACKET_TICKS) ? _keepalive : CLEAR_PACKET_TICKS;
+
         ++_nPollTicks;
         ++_nSrvTicks;
-        if(_nSrvTicks > ((_keepalive * 5) / 4)) _onDisconnect(55);
-        else {
-            if(_nPollTicks > _keepalive){
-                PingPacket pp{};
-                _nPollTicks=0;
-                Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound);
-            }
+        if (_PingSent) ++_nPingTicks;
+
+        if(_nPingTicks > ((_keepalive * 3) / 2)) _onDisconnect(55);  // No PINGRESP received
+        else if(_nPollTicks > _keepalive){  // No client send activity
+            PingPacket pp{};
+            _PingSent = true;
+            _nPollTicks=0;
         }
+        else if(_nSrvTicks > _pollserver){  // No server receive activity
+            PingPacket pp{};  // Is server still alive ?
+            _PingSent = true;
+            _nSrvTicks=0;
+        }
+        else if(_nSrvTicks == CLEAR_PACKET_TICKS) Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound); // Last packet received 5 seconds ago 
     }
 }
 
@@ -234,7 +247,7 @@ void AsyncMQTT::connect() {
     if (_connected) return;
     _createClient();
 
-    _nPollTicks=_nSrvTicks=0;
+    _nPollTicks=_nSrvTicks=_nPingTicks=0;
     ASMQ_PRINT("CONNECT");
     if (_useIp) _caller->connect(_ip, _port);
     else _caller->connect(CSTR(_host), _port);
