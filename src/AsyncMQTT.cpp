@@ -98,6 +98,7 @@ void AsyncMQTT::setServer(const char* host, uint16_t port) {
 
 void AsyncMQTT::_onDisconnect(int8_t r) {
     ASMQ_PRINT("_onDisconnect %d\n",r);
+    _PingSent = false;
     if(_connected){
         Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound);
         Packet::_clearFlowControlQ();
@@ -122,6 +123,7 @@ void AsyncMQTT::_incomingPacket(uint8_t* data, uint8_t offset,uint32_t pktlen,bo
             else {
                 _connected = true;
                 _nPollTicks=_nSrvTicks=_nPingTicks=0;
+                _PingSent = false;
                 bool session=i[0] & 0x01;
                 if(!session) _cleanStart();
                 else Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound);
@@ -248,6 +250,7 @@ void AsyncMQTT::connect() {
     _createClient();
 
     _nPollTicks=_nSrvTicks=_nPingTicks=0;
+    _PingSent = false;
     ASMQ_PRINT("CONNECT");
     if (_useIp) _caller->connect(_ip, _port);
     else _caller->connect(CSTR(_host), _port);
