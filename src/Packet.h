@@ -38,6 +38,7 @@ using ASMQ_REM_LENGTH     = std::pair<uint32_t,uint8_t>;
 class Packet {
     friend class AsyncMQTT;
         static  std::queue<ADFP>  _flowControl;
+        static  std::queue<uint16_t>  _IDControl;
     protected:
 
         static  bool             _pcb_busy;
@@ -61,8 +62,8 @@ class Packet {
                 uint8_t*         _block(size_t size);
                 void             _build(bool hold=false);
         static  void             _clearFlowControlQ();
-        static  void             _clearMap(ASMQ_PACKET_MAP* m,ASMQ_RESEND_PRED pred);
-        static  void             _clearPacketMap(ASMQ_RESEND_PRED ipred,ASMQ_RESEND_PRED opred);
+        static  void             _clearMap(ASMQ_PACKET_MAP* m,ASMQ_RESEND_PRED pred,bool force=false);
+        static  void             _clearPacketMap(ASMQ_RESEND_PRED ipred,ASMQ_RESEND_PRED opred,bool force=false);
         static  ASMQ_REM_LENGTH  _getrl(uint8_t* p);
         static  ADP_t            _decodePub(uint8_t* data,uint8_t offset,uint32_t length);
                 void             _idGarbage(uint16_t id);
@@ -134,7 +135,6 @@ class UnsubscribePacket: public Packet {
             _build();
         }
 };
-
 class PublishPacket: public Packet {
         std::string     _topic;
         uint8_t         _qos;
@@ -145,7 +145,7 @@ class PublishPacket: public Packet {
         uint16_t        _givenId=0;
     public:
         PublishPacket(const char* topic, uint8_t qos, bool retain, uint8_t* payload, size_t length, bool dup,uint16_t givenId=0);
-        ~PublishPacket(){ _outbound.erase(_id); }
+        ~PublishPacket(){/* _outbound.erase(_id);*/}
 
         bool     resend();
 };

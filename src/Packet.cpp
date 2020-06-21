@@ -4,6 +4,7 @@ uint16_t                            Packet::_nextId=0;
 ASMQ_PACKET_MAP                     Packet::_inbound;
 ASMQ_PACKET_MAP                     Packet::_outbound;
 std::queue<ADFP>                    Packet::_flowControl;
+std::queue<uint16_t>                Packet::_IDControl;
 ADFP                                Packet::_unAcked=nullptr;
 uint16_t                            Packet::_uaId=0;;
 bool                                Packet::_pcb_busy=false;
@@ -29,6 +30,10 @@ void Packet::_ackTCP(size_t len, uint32_t time){
         }
     } else ASMQ_PRINT("FATAL!: ACK WITH NO OUTBOUND !\n");
 
+    if(!_IDControl.empty()){
+        _uaId=_IDControl.front();
+        _IDControl.pop();
+    }
     if(!_flowControl.empty()){
 //        AsyncMQTT::dumphex(_flowControl.front(),14);
         uint8_t* p=_flowControl.front();
@@ -88,19 +93,23 @@ void Packet::_clearFlowControlQ(){
         _flowControl.pop();
     }
 
+    while(!_IDControl.empty()){
+        _IDControl.pop();
+    }
     _unAcked=nullptr;
     _uaId=0;
 }
-void Packet::_clearMap(ASMQ_PACKET_MAP* m,ASMQ_RESEND_PRED pred){
+void Packet::_clearMap(ASMQ_PACKET_MAP* m,ASMQ_RESEND_PRED pred,bool force){
 //    AsyncMQTT::dump();
     std::vector<uint16_t> morituri;
-    for(auto const& p:*m) if(pred(p.second)) morituri.push_back(p.first);
+    if (force) for(auto const& p:*m) morituri.push_back(p.first);
+    else for(auto const& p:*m) if(pred(p.second)) morituri.push_back(p.first);
     for(auto const& i:morituri) _ACK(m,i);
 }
 
-void Packet::_clearPacketMap(ASMQ_RESEND_PRED ipred,ASMQ_RESEND_PRED opred){
-    _clearMap(&_inbound,ipred);
-    _clearMap(&_outbound,opred);
+void Packet::_clearPacketMap(ASMQ_RESEND_PRED ipred,ASMQ_RESEND_PRED opred,bool force){
+    _clearMap(&_inbound,ipred,force);
+    _clearMap(&_outbound,opred,force);
 }
 /*
 struct ASMQ_DECODED_PUB {
@@ -200,6 +209,7 @@ bool Packet::_predOutbound(ADFP p){
     ASMQ_PRINT("OUTBOUND RESEND? id=%d qos=%d\n",dp.id,dp.qos);
     if(dp.qos==1){
         p[0]|=0x08; // set dup
+        _uaId=dp.id;
         _release(p,_packetLength(p));
     }
     else  PubrelPacket prp(dp.id);
@@ -217,7 +227,7 @@ void Packet::_release(uint8_t* base,size_t len){
         _unAcked=base; // save address of "floating" unfreed packet so _ACK can use it
         AsyncMQTT::_nPollTicks=0;
     }
-    else _flowControl.push(base);
+    else {_flowControl.push(base); _IDControl.push(_uaId);}
 }
 
 std::vector<uint8_t> Packet::_rl(uint32_t X){

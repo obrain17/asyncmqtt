@@ -100,7 +100,7 @@ void AsyncMQTT::_onDisconnect(int8_t r) {
     ASMQ_PRINT("_onDisconnect %d\n",r);
     _PingSent = false;
     if(_connected){
-        Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound);
+        Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound, true);
         Packet::_clearFlowControlQ();
         ASMQ_PRINT("DELETE ????? %d\n",r);
         _destroyClient();
@@ -141,6 +141,7 @@ void AsyncMQTT::_incomingPacket(uint8_t* data, uint8_t offset,uint32_t pktlen,bo
             if(_cbUnsubscribe) _cbUnsubscribe(_peek16(i));
             break;
         case PUBACK:
+            Packet::ACKoutbound(_peek16(i));
             if(_cbPublish) _cbPublish(_peek16(i));
             break;
         case PUBREC:
@@ -149,10 +150,12 @@ void AsyncMQTT::_incomingPacket(uint8_t* data, uint8_t offset,uint32_t pktlen,bo
         case PUBREL:
             {
                 PubcompPacket pcp(_peek16(i)); // pubrel
+                id=_peek16(i);
                 if(Packet::_inbound.count(id)) _onData(Packet::_inbound[id],Packet::_packetLength(Packet::_inbound[id]),true); // synthetic
             }
             break;
         case PUBCOMP:
+            Packet::ACKoutbound(_peek16(i));
             if(_cbPublish) _cbPublish(_peek16(i));
             break;
         default:
@@ -198,7 +201,7 @@ void AsyncMQTT::_onData(uint8_t* data, size_t len,bool synthetic) {
     } while (&data[0] + len - p);
 }
 
-#define CLEAR_PACKET_TICKS (5 * ASMQ_POLL_RATE)  // Clear Packets after server idle for 5 seconds
+#define CLEAR_PACKET_TICKS (10 * ASMQ_POLL_RATE)  // Clear Packets after server idle for 10 seconds
 
 void AsyncMQTT::_onPoll(AsyncClient* client) {
     ASMQ_PRINT("T=%u poll C=%d S=%d P=%d\n",millis(),_nPollTicks,_nSrvTicks,_nPingTicks);
@@ -220,7 +223,7 @@ void AsyncMQTT::_onPoll(AsyncClient* client) {
             _PingSent = true;
             _nSrvTicks=0;
         }
-        else if(_nSrvTicks == CLEAR_PACKET_TICKS) Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound); // Last packet received 5 seconds ago 
+        else if(_nSrvTicks == CLEAR_PACKET_TICKS) Packet::_clearPacketMap(Packet::_predInbound,Packet::_predOutbound); // Last packet received 10 seconds ago 
     }
 }
 
